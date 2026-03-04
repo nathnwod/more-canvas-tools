@@ -27,15 +27,29 @@ export function getSpeedGraderUrl(user: string = "", assignment: string = ""): s
 }
 
 export function getCourse(): string {
-    return (window as any).ENV.context_asset_string;
+    return (window as any).ENV?.context_asset_string ?? "";
 }
 
 export function getCourseId(): number {
-    return parseInt(getCourse().split("_")[1], 10);
+    const envContextAssetString = getCourse();
+    if (envContextAssetString) {
+        const match = envContextAssetString.match(/_(\d+)$/);
+        if (match) {
+            return parseInt(match[1], 10);
+        }
+    }
+
+    // Fallback: parse from URL like /courses/1905019/assignments/...
+    const pathMatch = window.location.pathname.match(/\/courses\/(\d+)/);
+    if (pathMatch) {
+        return parseInt(pathMatch[1], 10);
+    }
+
+    throw new Error("Could not determine Canvas course id (missing ENV.context_asset_string and no /courses/<id> in URL)");
 }
 
 export function getBaseUrl(): string {
-    return (window as any).ENV.DEEP_LINKING_POST_MESSAGE_ORIGIN;
+    return (window as any).ENV?.DEEP_LINKING_POST_MESSAGE_ORIGIN ?? window.location.origin;
 }
 
 export function getBaseApiUrl(): string {

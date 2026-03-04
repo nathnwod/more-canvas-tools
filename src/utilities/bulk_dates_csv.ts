@@ -165,6 +165,7 @@ function populateLiveView(assignments: AssignmentDateWithName[], liveView: HTMLD
         }
     });
     for (const assignment of assignments) {
+        console.log(assignment.name, assignment.unlock_at, assignment.due_at, assignment.lock_at);
         const row = document.createElement("tr");
         row.innerHTML = `<td>${assignment.name}</td>
             <td>${prettyDate(assignment.unlock_at)}</td>
@@ -173,6 +174,20 @@ function populateLiveView(assignments: AssignmentDateWithName[], liveView: HTMLD
         liveView.querySelector("tbody")?.appendChild(row);
     }
 }
+
+export async function getAssignmentInfo() {
+    const jq = (window as any).$;
+    if (!jq?.get) {
+        console.warn("[More Canvas Tools] jQuery ($) is not available yet; cannot call getAll(). Try again after the page finishes loading.");
+        return;
+    }
+
+    const courseId = getCourseId();
+    const assignments = await getAll(jq.get.bind(jq), "assignments", { "per_page": 100, "include[]:": ["overrides", "all_dates"] });
+    console.log("[More Canvas Tools] Assignments for course", courseId, assignments);
+}
+
+
 
 async function exportToCSVView(courseId: number, assignments: AssignmentDateWithName[], editorView: HTMLTextAreaElement, settings: ImportExportAssignmentDateSettings): Promise<string> {
     return new Promise<string>((resolve) => {

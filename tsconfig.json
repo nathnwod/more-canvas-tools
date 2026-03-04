@@ -25,5 +25,5 @@
         "./src/*.d.ts",
         "./src/**/*.tsx",
         "./src/**/*.ts"
-    ]
+, "src/scripts/script.js"    ]
 }
