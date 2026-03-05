@@ -56,6 +56,10 @@ export function getBaseApiUrl(): string {
     return getBaseUrl() + "/api/v1/";
 }
 
+function joinUrl(base: string, path: string): string {
+    return base.replace(/\/+$/, "") + "/" + path.replace(/^\/+/, "");
+}
+
 export function getBaseCourseUrl(): string {
     return getBaseApiUrl() + "courses/" + getCourseId();
 }
@@ -104,7 +108,12 @@ export function parseLinks(linkHeader: string) {
 type HandleResult = (...data: any) => any;
 
 export function getAll(verb: HandleResult, url: string, options: object): JQueryPromise<any> {
-    return getAllWithoutCourse(verb, getBaseCourseUrl()  + "/" + url, options);
+    return getAllWithoutCourse(verb, joinUrl(getBaseCourseUrl(), url), options as CanvasRequestOptions);
+}
+
+// Like getAll(), but for non-course endpoints (ex: /api/v1/courses)
+export function getAllApi(verb: HandleResult, url: string, options: CanvasRequestOptions = {}): JQueryPromise<any> {
+    return getAllWithoutCourse(verb, joinUrl(getBaseApiUrl(), url), options);
 }
 
 export type CanvasRequestOptions = { [key: string]: any };
@@ -125,6 +134,13 @@ function delay(t: number, i: any) {
     });
 }
 
+function jqPromiseToPromise<T>(p: JQueryPromise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+        p.done((data: T) => resolve(data));
+        p.fail((data: any, status: any, req: any) => reject({ data, status, req }));
+    });
+}
+
 function serial(callbacks: any[], i: number = 0): Promise<void> {
     if (i < callbacks.length) {
         return callbacks[i]().then(() => serial(callbacks, i + 1));
@@ -138,6 +154,45 @@ export async function getAllBatched(verb: HandleResult, url: string, optionsList
         delay(100, options['student_ids[]']);
         return getAll(verb, url, options.options).done((everything) => perCallback(options, everything));
     })));
+}
+
+export type CourseAssignment = {
+    courseId: number;
+    courseName?: string;
+    assignment: any;
+};
+
+// Gets assignments across ALL your courses (does not require being on a course page)
+export async function getAssignmentsAcrossCourses(
+    verb: HandleResult,
+    assignmentOptions: CanvasRequestOptions = {},
+    courseOptions: CanvasRequestOptions = {}
+): Promise<CourseAssignment[]> {
+    const courses = await jqPromiseToPromise<any[]>(
+        getAllApi(verb, "courses", {
+            enrollment_state: "active",
+            ...courseOptions
+        })
+    );
+
+    const result: CourseAssignment[] = [];
+    for (const course of courses) {
+        await delay(150, course?.id);
+
+        const assignments = await jqPromiseToPromise<any[]>(
+            getAllWithoutCourse(
+                verb,
+                joinUrl(getBaseApiUrl(), `courses/${course.id}/assignments`),
+                { ...assignmentOptions }
+            )
+        );
+
+        for (const assignment of assignments) {
+            result.push({ courseId: course.id, courseName: course?.name, assignment });
+        }
+    }
+
+    return result;
 }
 
 export function getAllWithoutCourse(verb: HandleResult, url: string, options: CanvasRequestOptions): JQueryPromise<any> {

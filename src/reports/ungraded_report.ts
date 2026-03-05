@@ -101,6 +101,8 @@ export function changeRememberAsMine(event: JQuery.ChangeEvent) {
     }
 }
 
+
+// I guess this is for teachers and tas to see what assignments they still need to grade idk? - Nathan
 export async function loadUngradedSubmissions(groupId: string="", assignmentId: string="") {
     if (!groupId) {
         groupId = ""+($("#list-ungraded-group-select").val() || "");
@@ -168,13 +170,41 @@ export async function loadUngraded() {
     $("#ungradedReportStatus").html("");
 }
 
-export function injectListUngradedButton(target: HTMLElement) {
-    $(target).append(LIST_UNGRADED_BUTTON);
-    $("#listUngraded").on("click", (event: JQuery.ClickEvent) => {
+function findUngradedButtonMount(sidebarRoot: Element): Element {
+    const candidates = [
+        ".page-action-list",
+        ".ic-Sidebar__actions ul",
+        "ul.page-action-list",
+        "ul",
+    ];
+
+    for (const selector of candidates) {
+        const found = sidebarRoot.querySelector(selector);
+        if (found) {
+            return found;
+        }
+    }
+
+    return sidebarRoot;
+}
+
+export function injectListUngradedButton(sidebarRoot: Element) {
+    if (document.getElementById("assignment-list-ungraded-link")) {
+        return;
+    }
+
+    const mount = findUngradedButtonMount(sidebarRoot);
+    const jq = (window as any).$;
+    if (!jq) {
+        console.warn("[More Canvas Tools] jQuery ($) not found; cannot inject ungraded button yet.");
+        return;
+    }
+
+    jq(mount).append(LIST_UNGRADED_BUTTON);
+    jq("#listUngraded").on("click", (event: JQuery.ClickEvent) => {
         event.preventDefault();
         startDialog("List Ungraded Submissions", LIST_UNGRADED_DIALOG_HTML);
         loadUngraded();
         return false;
-        // loadSubmission();
     });
 }

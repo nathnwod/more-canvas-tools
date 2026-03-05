@@ -5,6 +5,19 @@ const STYLESHEETS = {
     main: stylesheet({
         condition: ALWAYS,
         css: `
+            .fc-day-grid-event {
+                border-radius: 10px;
+            }
+            #active {
+                
+            }
+
+            #calendar-app .fc-event {
+                background-color: #4141413a;
+                text-decoration: line-through;
+            }
+
+        
             
         `,
     }),
@@ -14,3 +27,4 @@ const STYLESHEETS = {
 const _: Stylesheets = STYLESHEETS; void _;
 
 export default STYLESHEETS;
+

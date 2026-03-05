@@ -4,7 +4,7 @@ import { parse } from 'csv-parse';
 
 import { startDialog } from "~src/canvas/dialog";
 import { Assignment, AssignmentDate, AssignmentDateWithName, Course } from "~src/canvas/interfaces";
-import { getAll, getBaseCourseUrl, getCourseId } from "~src/canvas/settings";
+import { getAll, getAllApi, getBaseCourseUrl, getCourseId } from "~src/canvas/settings";
 
 const BULK_ASSIGNMENTS_MENU_ITEM_HTML = `
 <li role="presentation" class="ui-menu-item">
@@ -176,16 +176,50 @@ function populateLiveView(assignments: AssignmentDateWithName[], liveView: HTMLD
 }
 
 export async function getAssignmentInfo() {
+    // makes sure jquery exixts before using it
     const jq = (window as any).$;
-    if (!jq?.get) {
-        console.warn("[More Canvas Tools] jQuery ($) is not available yet; cannot call getAll(). Try again after the page finishes loading.");
-        return;
+    if (!jq?.get) return;
+
+    // gets all courses that you are actively enrolled inm 
+    const courses = await getAllApi(jq.get.bind(jq), "courses", { enrollment_state: "active" });
+
+    // an array for every assignment in every course
+    const allAssignments: Array<{
+        courseId: number;
+        courseName: string;
+        assignmentId: number;
+        name: string;
+        unlock_at: string;
+        due_at: string;
+        lock_at: string;
+    }> = [];
+
+    for (const course of courses) {
+
+        // 
+        const assignments: Assignment[] = await getAllApi(jq.get.bind(jq),
+            `courses/${course.id}/assignments`,
+            { "include[]": ["all_dates", "overrides"] } // make sure that we account for extensions/changed due dates for individual
+        );
+
+        for (const assignment of assignments) {
+            allAssignments.push({
+                courseId: course.id,
+                courseName: course.name,
+                assignmentId: assignment.id,
+                name: assignment.name,
+                unlock_at: prettyDate(assignment.unlock_at),
+                due_at: prettyDate(assignment.due_at),
+                lock_at: prettyDate(assignment.lock_at),
+            });
+        }
     }
 
-    const courseId = getCourseId();
-    const assignments = await getAll(jq.get.bind(jq), "assignments", { "per_page": 100, "include[]:": ["overrides", "all_dates"] });
-    console.log("[More Canvas Tools] Assignments for course", courseId, assignments);
+    console.log("courses:", courses);
+    console.log("allAssignments:", allAssignments);
+     
 }
+
 
 
 
@@ -331,7 +365,7 @@ export async function loadAssignmentDateEditor() {
     const courseId = getCourseId();
 
     // Load the actual data
-    let assignments = await getAll($.get, "assignments", { "per_page": 100, "include[]:": ["overrides", "all_dates"] });
+        let assignments = await getAll($.get, "assignments", { "per_page": 100, "include[]": ["overrides", "all_dates"] });
     let assignmentDates = extractDates(assignments);
     populateLiveView(assignmentDates, liveView);
 
@@ -415,7 +449,7 @@ export async function loadAssignmentDateEditor() {
 
     // Reset button
     $("#bulk-assignment-dates-reset").on("click", async () => {
-        assignments = await getAll($.get, "assignments", { "per_page": 100, "include[]:": ["overrides", "all_dates"] });
+        assignments = await getAll($.get, "assignments", { "per_page": 100, "include[]": ["overrides", "all_dates"] });
         populateLiveView(assignments, liveView);
     });
 
@@ -450,7 +484,7 @@ interface DateChange {
 export async function startPublishDates(courseId: number, assignments: AssignmentDateWithName[]) {
     $("#bulk-assignment-dates-changes-row").show();
     // Get the latest assignments
-    const latestAssignments: Assignment[] = await getAll($.get, "assignments", { "per_page": 100, "include[]:": ["overrides", "all_dates"] });
+    const latestAssignments: Assignment[] = await getAll($.get, "assignments", { "per_page": 100, "include[]": ["overrides", "all_dates"] });
     // Iterate through all the assignments and compare the dates
     const assignmentChanges: Record<string, DateChange[]> = {};
     for (const assignment of assignments) {
@@ -458,7 +492,11 @@ export async function startPublishDates(courseId: number, assignments: Assignmen
             continue;
         }
         const assignmentId = assignment.id.toString();
-        const latestAssignment = latestAssignments.find((a) => a.id === assignment.id);
+        /**
+         * Finds the assignment from the latestAssignments array that matches the current assignment's ID.
+         * Used to retrieve the most recent data for the assignment being processed.
+         */
+        const latestAssignment = latestAssignments.find((a) => a.id === assignment.id); // find assignment id
         if (!latestAssignment) {
             assignmentChanges[assignmentId] = [{
                 id: assignmentId,

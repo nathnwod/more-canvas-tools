@@ -15,7 +15,6 @@ const describeFailure = errors.failureDescriber({
   location: document.location,
 });
 
-const BTN_ID = "delete-account-btn";
 
 // ensures user is on correct page
 function isMonthView(): boolean {
@@ -32,48 +31,7 @@ function isMonthView(): boolean {
 
 
 function addOrRemoveButton() {
-  const existing = document.getElementById(BTN_ID);
 
-  // Only show in month view
-  if (!isMonthView()) {
-    existing?.remove();
-    return;
-  }
-
-  if (existing) return;
-
-  const btn = document.createElement("button");
-  btn.id = BTN_ID;
-  btn.textContent = "Delete Account!!!";
-  btn.type = "button";
-
-  btn.style.position = "fixed";
-  btn.style.top = "16px";
-  btn.style.right = "16px";
-  btn.style.zIndex = "999999";
-  btn.style.padding = "10px 14px";
-  btn.style.borderRadius = "3px";
-  btn.style.border = "1px solid #ccc";
-  btn.style.background = "#0fffff";
-  btn.style.cursor = "pointer";
-
-  btn.addEventListener("click", () => {
-    console.log("Account deleted forever!");
-
-    fetch("/api/v1/users/self/profile", { credentials: "include" })
-      .then((r) => r.json())
-      .then((data) => console.log(data));
-  });
-
-  btn.addEventListener("mouseenter", () => {
-    btn.style.backgroundColor = "#E4E8E8";
-  });
-
-  btn.addEventListener("mouseleave", () => {
-    btn.style.backgroundColor = "#0fffff";
-  });
-
-  document.body.appendChild(btn);
 }
 
 function installSpaListeners() {
@@ -99,6 +57,8 @@ userscripter.run({
   initialAction: () => {
     log.log(`${U.name} ${U.version} - Hello world!`);
 
+    
+
     const start = () => {
       addOrRemoveButton();
       installSpaListeners();
@@ -107,10 +67,14 @@ userscripter.run({
       // to load Canvas globals like jQuery ($) and ENV.
       if ((window as any).$) {
         void getAssignmentInfo();
+        // void showUnpublishedAssignment();
+        
       } else {
         setTimeout(() => {
           if ((window as any).$) {
             void getAssignmentInfo();
+            // void showUnpublishedAssignment();
+
           }
         }, 1000);
       }

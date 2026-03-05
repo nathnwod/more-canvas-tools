@@ -59,10 +59,10 @@ const OPERATIONS: ReadonlyArray<Operation<any>> = [
         description: "provide button to list ungraded assignments for TAs",
         condition: () => isOnAssignment,
         dependencies: {
-            relatedItemsList: "#sidebar_content .page-action-list"
+            sidebarContent: "#sidebar_content"
         },
         action: (e) => {
-            injectListUngradedButton(e.relatedItemsList);
+            injectListUngradedButton(e.sidebarContent);
         },
         deferUntil: DOMCONTENTLOADED
     }),
