@@ -192,3 +192,10 @@ Usage:
 
 Status:
 - Work in progress (WIP). Behavior and UI may change.
+- I have been struggling to understand the codebase, so not much is currently functional. I have created a helper functiom getAssignmentInfo(); which creates an array of every assignment from every active class, and notes only the important variables needed for calendar. 
+
+- Have only managed to update the styling of calendar events to show a preview of what an event marked as complete will look like. 
+
+![alt text](image.png)
+
+- To-do: Finish adding functionality to each feature.
