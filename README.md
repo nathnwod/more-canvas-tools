@@ -171,3 +171,15 @@ Here's an example of what my header looks like, note the `@require` line:
 * 0.2.1: Fix spread grade to allow spreading grades different than the rubric
 * 0.3.0: Add feature for listing ungraded submissions
 * 0.4.0: New feature for listing recently enrolled users on course page. Also super rough prototype of search command.
+
+
+# Added new Feature - Nathan Wood
+
+Calendar pro extension (WIP): 
+
+This extension adds many helpful features to the canvas calendar. These include:
+1. ability to mark assignments as complete
+2. graded assignments will by default be marked as complete to avoid finished assignments being left unmarked
+3. mark assignments as late on the calendar to make missed assignments harder to miss
+4. assignments will now span from their available date to their due date like a multi-day event on Google Calendar
+5. locked assignments will be marked with a lock symbol on the calendar
