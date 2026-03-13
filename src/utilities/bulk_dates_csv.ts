@@ -3,8 +3,9 @@ import { stringify } from 'csv-stringify';
 import { parse } from 'csv-parse';
 
 import { startDialog } from "~src/canvas/dialog";
-import { Assignment, AssignmentDate, AssignmentDateWithName, Course } from "~src/canvas/interfaces";
-import { getAll, getBaseCourseUrl, getCourseId } from "~src/canvas/settings";
+import { Assignment, AssignmentDate, AssignmentDateWithName, Course, Submission } from "~src/canvas/interfaces";
+import { getAll, getAllWithoutCourse, getBaseApiUrl, getBaseCourseUrl, getCourseId } from "~src/canvas/settings";
+import { event } from "jquery";
 
 const BULK_ASSIGNMENTS_MENU_ITEM_HTML = `
 <li role="presentation" class="ui-menu-item">
@@ -46,6 +47,50 @@ function loadDraft(courseId: number): AssignmentDateWithName[] | null {
     } else {
         return null;
     }
+}
+
+
+// ADDED BYNW
+const CALENDAR_COMPLETION_STORAGE_KEY = "marked-complete-assignments";
+
+function getCompletionKey(courseId: number, assignmentId: number): string {
+    return `${courseId}:${assignmentId}`;
+}
+
+function loadMarkedCompleteAssignments(): Set<string> {
+    const raw = localStorage.getItem(CALENDAR_COMPLETION_STORAGE_KEY);
+    if (!raw) {
+        return new Set<string>();
+    }
+
+    try {
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) {
+            return new Set<string>();
+        }
+        return new Set<string>(parsed.filter((value): value is string => typeof value === "string"));
+    } catch {
+        return new Set<string>();
+    }
+}
+
+function saveMarkedCompleteAssignments(markedAssignments: Set<string>) {
+    localStorage.setItem(CALENDAR_COMPLETION_STORAGE_KEY, JSON.stringify(Array.from(markedAssignments)));
+}
+
+function applyCompletedEventStyles(eventContainer: HTMLElement) {
+    eventContainer.style.backgroundColor = "#4141413a";
+    eventContainer.style.textDecoration = "line-through";
+    eventContainer.style.opacity = "0.7";
+}
+
+function getCalendarEventTitle(eventContainer: HTMLElement): string {
+    return (
+        eventContainer.getAttribute("title") ||
+        eventContainer.querySelector(".fc-title")?.textContent ||
+        eventContainer.textContent ||
+        ""
+    ).trim();
 }
 
 // Two column layout
@@ -208,6 +253,155 @@ function extractDates(assignments: Assignment[]): AssignmentDateWithName[] {
         };
     });
 }
+
+export async function getAssignmentInfo(): Promise<Array<{
+    isMarkedComplete: boolean;
+    submission: Submission | null;
+    courseId: number;
+    courseName: string;
+    assignmentId: number;
+    name: string;
+    unlock_at: string;
+    due_at: string;
+    lock_at: string;
+}>> {
+    // makes sure jquery exists before using it
+    const jq = (window as any).$;
+    if (!jq?.get) return [];
+    const markedAssignments = loadMarkedCompleteAssignments();
+
+
+    // gets all courses that you are actively enrolled in
+    const courses: Course[] = await getAllWithoutCourse(
+        jq.get.bind(jq),
+        `${getBaseApiUrl()}courses`,
+        { enrollment_state: "active" }
+    );
+
+
+    // an array for every assignment in every course
+    const allAssignments: Array<{
+        isMarkedComplete: boolean;
+        submission: Submission | null;
+        courseId: number;
+        courseName: string;
+        assignmentId: number;
+        name: string;
+        unlock_at: string;
+        due_at: string;
+        lock_at: string;
+    }> = [];
+
+
+    for (const course of courses) {
+        const assignments: Assignment[] = await getAllWithoutCourse(
+            jq.get.bind(jq),
+            `${getBaseApiUrl()}courses/${course.id}/assignments`,
+            { "include[]": ["all_dates", "overrides", "submission"] } // make sure that we account for extensions/changed due dates for individual
+        );
+
+
+        for (const assignment of assignments) {
+            allAssignments.push({
+                isMarkedComplete: markedAssignments.has(getCompletionKey(course.id, assignment.id)),
+                submission: assignment.submission ? assignment.submission as Submission : null,
+                courseId: course.id,
+                courseName: course.name,
+                assignmentId: assignment.id,
+                name: assignment.name,
+                unlock_at: prettyDate(assignment.unlock_at),
+                due_at: prettyDate(assignment.due_at),
+                lock_at: prettyDate(assignment.lock_at),
+            });
+        }
+    }
+    // console.log("courses:", courses);
+    // console.log("allAssignments:", allAssignments);
+   
+    return allAssignments;
+}
+
+export async function markAsComplete() {
+    
+}
+
+
+export async function markGradedAsComplete() {
+    const assignments = await getAssignmentInfo();
+    const eventContainers = Array.from(document.querySelectorAll<HTMLElement>("#calendar-app .fc-event"));
+    const markedAssignments = loadMarkedCompleteAssignments();
+
+    for (const eventContainer of eventContainers) {
+        const eventTitle = getCalendarEventTitle(eventContainer);
+        const matchingAssignments = assignments.filter((assignment) => assignment.name === eventTitle);
+
+        if (!matchingAssignments.length) {
+            continue;
+        }
+
+        if (matchingAssignments.some((assignment) => assignment.submission?.workflow_state !== "unsubmitted" || assignment.isMarkedComplete)) {
+            applyCompletedEventStyles(eventContainer);
+        }
+
+        if (eventContainer.dataset.moreCanvasCompleteBound === "true") {
+            continue;
+        }
+
+        eventContainer.dataset.moreCanvasCompleteBound = "true";
+        eventContainer.addEventListener("click", () => {
+            for (const assignment of matchingAssignments) {
+                if(assignment.isMarkedComplete === false){
+                    assignment.isMarkedComplete = true;
+                } else {
+                    assignment.isMarkedComplete = false;
+                }
+                
+                markedAssignments.add(getCompletionKey(assignment.courseId, assignment.assignmentId));
+                applyCompletedEventStyles(eventContainer);
+            }
+
+            saveMarkedCompleteAssignments(markedAssignments);
+            applyCompletedEventStyles(eventContainer);
+        });
+    }
+}
+
+
+let calendarObserverSetup = false;
+let calendarObserverTimer: number | undefined;
+
+
+export function watchCalendarForGradedAssignments() {
+    if (calendarObserverSetup) {
+        return;
+    }
+
+
+    const calendar = document.querySelector("#calendar-app");
+    if (!calendar) {
+        return;
+    }
+
+
+    const rerun = () => {
+        window.clearTimeout(calendarObserverTimer);
+        calendarObserverTimer = window.setTimeout(() => {
+            void markGradedAsComplete();
+        }, 150);
+    };
+
+
+    const observer = new MutationObserver(rerun);
+    observer.observe(calendar, {
+        childList: true,
+        subtree: true,
+    });
+
+
+    calendarObserverSetup = true;
+    rerun();
+}
+
 
 async function importFromCSVView(courseId: string, editorView: HTMLTextAreaElement, settings: ImportExportAssignmentDateSettings): Promise<AssignmentDateWithName[] | null> {
     return new Promise<AssignmentDateWithName[] | null>((resolve) => {

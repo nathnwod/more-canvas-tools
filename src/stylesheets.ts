@@ -5,7 +5,20 @@ const STYLESHEETS = {
     main: stylesheet({
         condition: ALWAYS,
         css: `
-            
+            .fc-day-grid-event {
+                border-radius: 10px;
+            }
+
+
+
+            #calendar-app .fc-event {
+             
+         
+            }
+
+
+       
+           
         `,
     }),
 } as const;

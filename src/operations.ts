@@ -1,6 +1,6 @@
 import { ALWAYS, DOMCONTENTLOADED, LOAD } from "userscripter/lib/environment";
 import { Operation, operation } from "userscripter/lib/operations";
-import { isOnAssignment, isOnPeoplePage, isOnSpeedGrader, hasLeftNavigation, isOnCourseHome, hasGlobalNavigation, isOnAssignmentList } from "./canvas/page_checks";
+import { isOnAssignment, isOnPeoplePage, isOnSpeedGrader, hasLeftNavigation, isOnCourseHome, hasGlobalNavigation, isOnAssignmentList, isOnCalendar } from "./canvas/page_checks";
 import { loadUserActivityReport } from "./reports/user_activity";
 import { injectGraderLabel } from "./utilities/grader_label";
 import { injectLimitEnrollmentButton } from "./utilities/limit_enrollment";
@@ -8,7 +8,7 @@ import { injectSpreadGradeButton } from "./utilities/spread_grade";
 import { injectListUngradedButton } from "./reports/ungraded_report";
 import { injectRecentlyEnrolled } from "./reports/recently_enrolled";
 import { injectSearchButton } from "./utilities/search_menu";
-import { injectBulkAssignmentDatesButton } from "./utilities/bulk_dates_csv";
+import { injectBulkAssignmentDatesButton, watchCalendarForGradedAssignments } from "./utilities/bulk_dates_csv";
 
 const OPERATIONS: ReadonlyArray<Operation<any>> = [
     operation({
@@ -21,6 +21,15 @@ const OPERATIONS: ReadonlyArray<Operation<any>> = [
             loadUserActivityReport();
         },
         deferUntil: DOMCONTENTLOADED,
+    }),
+    //ADDED BY NW
+    operation({
+        description: "mark calendar events for graded or complete assignments as complete",
+        action: () => {
+            watchCalendarForGradedAssignments();
+        },
+        deferUntil: DOMCONTENTLOADED,
+        condition: () => isOnCalendar,
     }),
     operation({
         description: "provide limit section enrollment button",

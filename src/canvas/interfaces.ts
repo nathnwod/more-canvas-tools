@@ -89,6 +89,7 @@ export interface Assignment {
     original_assignment_name: string;
     original_quiz_id: number;
     workflow_state: string;
+    isMarkedComplete: boolean;
 }
 
 

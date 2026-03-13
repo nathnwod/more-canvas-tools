@@ -1,11 +1,11 @@
 import { compose } from "@typed/compose";
 import { environment, errors, log, userscripter } from "userscripter";
-
 import * as CONFIG from "~src/config";
 import OPERATIONS from "~src/operations";
 import * as SITE from "~src/site";
 import STYLESHEETS from "~src/stylesheets";
 import U from "~src/userscript";
+
 
 const describeFailure = errors.failureDescriber({
     siteName: SITE.NAME,
@@ -16,7 +16,9 @@ const describeFailure = errors.failureDescriber({
 userscripter.run({
     id: U.id,
     name: U.name,
-    initialAction: () => log.log(`${U.name} ${U.version} - Hello world!`),
+    initialAction: () => {
+        log.log(`${U.name} ${U.version} - Hello world!`);
+    },
     stylesheets: STYLESHEETS,
     operationsPlan: {
         operations: OPERATIONS,

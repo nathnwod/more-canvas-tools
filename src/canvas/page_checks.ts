@@ -25,3 +25,5 @@ export const isOnCanvaDocs = /canvadocs.instructure.com/.test(document.location.
 export const hasLeftNavigation = !isOnSpeedGrader && !isOnCanvaDocs && !isOnDashboard && !isOnCourseList;
 
 export const hasGlobalNavigation = !isOnCanvaDocs;
+
+export const isOnCalendar = pathMatches(SITE.PATH.CALENDAR); //added by nw
