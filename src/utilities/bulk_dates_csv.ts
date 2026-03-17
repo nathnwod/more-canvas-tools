@@ -350,12 +350,7 @@ export async function markGradedAsComplete() {
         eventContainer.dataset.moreCanvasCompleteBound = "true";
         eventContainer.addEventListener("click", () => {
             for (const assignment of matchingAssignments) {
-                if(assignment.isMarkedComplete === false){
-                    assignment.isMarkedComplete = true;
-                } else {
-                    assignment.isMarkedComplete = false;
-                }
-                
+                assignment.isMarkedComplete = true;
                 markedAssignments.add(getCompletionKey(assignment.courseId, assignment.assignmentId));
                 applyCompletedEventStyles(eventContainer);
             }
