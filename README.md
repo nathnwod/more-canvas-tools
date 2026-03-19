@@ -199,6 +199,6 @@ Status:
       - created a key system to save marked complete assignments when switching pages
 
 
-![alt text](image.png)
+![alt text](<Screenshot 2026-03-16 221350.png>)
 
 - To-do: Finish adding functionality to each feature.
