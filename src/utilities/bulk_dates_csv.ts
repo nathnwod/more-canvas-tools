@@ -49,14 +49,81 @@ function loadDraft(courseId: number): AssignmentDateWithName[] | null {
     }
 }
 
+// Added by NW
+export async function addMarkAssignmentsAsCompleteBtn() {
+    const button = document.createElement("button");
+    button.className = "mark-assignments-complete-button";
+    button.innerHTML = `
+        <span>Mark Assignments as Complete</span>
+        <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="rgb(68, 68, 68)">
+            <path d="M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"/>
+        </svg>
+    `;
 
-// ADDED BYNW
+    //Undo All button
+    const undoButton = document.createElement("button");
+    undoButton.className = "mark-assignments-complete-button undo-all-button";
+    undoButton.innerHTML = `
+        <span>Undo Marked</span>
+        <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="rgb(68, 68, 68)"><path d="M280-200v-80h284q63 0 109.5-40T720-420q0-60-46.5-100T564-560H312l104 104-56 56-200-200 200-200 56 56-104 104h252q97 0 166.5 63T800-420q0 94-69.5 157T564-200H280Z"/></svg>
+    `;
+
+    // Canvas renders the calendar header async, so wait for it to appear
+    const poll = setInterval(() => {
+        const headerBar = document.querySelector(".calendar_header .header-bar");
+        if (headerBar && !document.querySelector(".mark-assignments-complete-button")) {
+            clearInterval(poll);
+            // Wrap both buttons in a container for spacing
+            const btnContainer = document.createElement('span');
+            btnContainer.style.display = 'inline-flex';
+            btnContainer.style.gap = '0.5em';
+            btnContainer.appendChild(button);
+            btnContainer.appendChild(undoButton);
+            headerBar.insertBefore(btnContainer, headerBar.children[1] || null);
+        }
+    }, 200);
+
+    // Toggle active class on click, but do not remove active when clicking elsewhere
+    button.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (!button.classList.contains("active")) {
+            button.classList.add("active");
+        } else {
+            button.classList.remove("active");
+        }
+    });
+
+    // Undo All button clears all user-marked assignments
+    undoButton.addEventListener("click", (e) => {
+        e.preventDefault();
+        localStorage.removeItem("marked-complete-assignments");
+        // Remove user-marked styling from all calendar events immediately
+        const eventContainers = Array.from(document.querySelectorAll<HTMLElement>("#calendar-app .fc-event"));
+        for (const eventContainer of eventContainers) {
+            // Only remove border, not default-complete styling
+            eventContainer.style.border = '';
+            // If not default-complete, also remove completed styles
+            if (eventContainer.style.backgroundColor === "#4141413a" && eventContainer.style.textDecoration === "line-through" && eventContainer.style.opacity === "0.7") {
+            } else {
+                eventContainer.style.backgroundColor = '';
+                eventContainer.style.textDecoration = '';
+                eventContainer.style.opacity = '';
+            }
+        }
+        // Re-run markGradedAsComplete to reapply correct styles for default-complete assignments
+        void markGradedAsComplete();
+    });
+}
+
+// Stores assignment completion state in localStorage as an array of "courseId:assignmentId" strings
 const CALENDAR_COMPLETION_STORAGE_KEY = "marked-complete-assignments";
 
+// Creates a stable identifier so completion state stays unique per course and assignment
 function getCompletionKey(courseId: number, assignmentId: number): string {
     return `${courseId}:${assignmentId}`;
 }
 
+// Loads previously marked assignments and falls back to an empty set if stored data is missing or invalid
 function loadMarkedCompleteAssignments(): Set<string> {
     const raw = localStorage.getItem(CALENDAR_COMPLETION_STORAGE_KEY);
     if (!raw) {
@@ -74,16 +141,30 @@ function loadMarkedCompleteAssignments(): Set<string> {
     }
 }
 
+// persists the current completion set back to localStorage
 function saveMarkedCompleteAssignments(markedAssignments: Set<string>) {
     localStorage.setItem(CALENDAR_COMPLETION_STORAGE_KEY, JSON.stringify(Array.from(markedAssignments)));
 }
 
-function applyCompletedEventStyles(eventContainer: HTMLElement) {
+// applies the visual treatment used for assignments treated as completed on the calendar
+function applyCompletedEventStyles(eventContainer: HTMLElement, isUserMarked: boolean = false) {
     eventContainer.style.backgroundColor = "#4141413a";
     eventContainer.style.textDecoration = "line-through";
     eventContainer.style.opacity = "0.7";
+    // // Add a border for user-marked complete assignments
+    // if (isUserMarked) {
+    //     eventContainer.style.border = '2px solid #5d2ecc';
+    // } else {
+    //     eventContainer.style.border = '';
+    // }
+    // Set only the text opacity for the event title span
+    const titleSpan = eventContainer.querySelector('.fc-title');
+    if (titleSpan) {
+        (titleSpan as HTMLElement).style.opacity = '0.7';
+    }
 }
 
+// reads the rendered event title from whichever Calendar DOM field is currently available
 function getCalendarEventTitle(eventContainer: HTMLElement): string {
     return (
         eventContainer.getAttribute("title") ||
@@ -270,6 +351,8 @@ export async function getAssignmentInfo(): Promise<Array<{
     if (!jq?.get) return [];
     const markedAssignments = loadMarkedCompleteAssignments();
 
+    (window as any).getAssignmentInfo = getAssignmentInfo;
+
 
     // gets all courses that you are actively enrolled in
     const courses: Course[] = await getAllWithoutCourse(
@@ -321,15 +404,16 @@ export async function getAssignmentInfo(): Promise<Array<{
     return allAssignments;
 }
 
-export async function markAsComplete() {
-    
-}
 
 
 export async function markGradedAsComplete() {
     const assignments = await getAssignmentInfo();
     const eventContainers = Array.from(document.querySelectorAll<HTMLElement>("#calendar-app .fc-event"));
     const markedAssignments = loadMarkedCompleteAssignments();
+
+    // Only allow marking as complete if the button is active
+    // const markBtn = document.querySelector('.mark-assignments-complete-button');
+    // const isActive = markBtn && markBtn.classList.contains('active');
 
     for (const eventContainer of eventContainers) {
         const eventTitle = getCalendarEventTitle(eventContainer);
@@ -339,8 +423,13 @@ export async function markGradedAsComplete() {
             continue;
         }
 
-        if (matchingAssignments.some((assignment) => assignment.submission?.workflow_state !== "unsubmitted" || assignment.isMarkedComplete)) {
-            applyCompletedEventStyles(eventContainer);
+        // If any assignment is already complete by default, always apply completed style, but do not allow toggling for these
+        const isDefaultComplete = matchingAssignments.some((assignment) => assignment.submission?.workflow_state !== "unsubmitted");
+        const isUserMarked = !isDefaultComplete && matchingAssignments.some((assignment) => assignment.isMarkedComplete);
+        if (isDefaultComplete) {
+            applyCompletedEventStyles(eventContainer, false);
+        } else if (isUserMarked) {
+            applyCompletedEventStyles(eventContainer, true);
         }
 
         if (eventContainer.dataset.moreCanvasCompleteBound === "true") {
@@ -349,14 +438,43 @@ export async function markGradedAsComplete() {
 
         eventContainer.dataset.moreCanvasCompleteBound = "true";
         eventContainer.addEventListener("click", () => {
+            // Do not allow toggling for assignments already complete by default
+            const isDefaultComplete = matchingAssignments.some((assignment) => assignment.submission?.workflow_state !== "unsubmitted");
+            if (isDefaultComplete) return;
+            // Toggle user-marked complete state only if the button is active
+            const markBtn = document.querySelector('.mark-assignments-complete-button');
+            if (!markBtn || !markBtn.classList.contains('active')) return;
+            let changed = false;
             for (const assignment of matchingAssignments) {
-                assignment.isMarkedComplete = true;
-                markedAssignments.add(getCompletionKey(assignment.courseId, assignment.assignmentId));
-                applyCompletedEventStyles(eventContainer);
+                const key = getCompletionKey(assignment.courseId, assignment.assignmentId);
+                // If already user-marked, unmark it
+                if (markedAssignments.has(key)) {
+                    markedAssignments.delete(key);
+                    assignment.isMarkedComplete = false;
+                    changed = true;
+                    // Remove completed styles and border
+                    eventContainer.style.backgroundColor = '';
+                    eventContainer.style.textDecoration = '';
+                    eventContainer.style.opacity = '';
+                    eventContainer.style.border = '';
+                    // Reset event title span opacity
+                    const titleSpan = eventContainer.querySelector('.fc-title');
+                    if (titleSpan) {
+                        (titleSpan as HTMLElement).style.opacity = '';
+                    }
+                } else {
+                    // Only mark as complete if not already visually complete by default (not by user)
+                    if (!assignment.isMarkedComplete) {
+                        markedAssignments.add(key);
+                        assignment.isMarkedComplete = true;
+                        applyCompletedEventStyles(eventContainer, true);
+                        changed = true;
+                    }
+                }
             }
-
-            saveMarkedCompleteAssignments(markedAssignments);
-            applyCompletedEventStyles(eventContainer);
+            if (changed) {
+                saveMarkedCompleteAssignments(markedAssignments);
+            }
         });
     }
 }

@@ -8,7 +8,7 @@ import { injectSpreadGradeButton } from "./utilities/spread_grade";
 import { injectListUngradedButton } from "./reports/ungraded_report";
 import { injectRecentlyEnrolled } from "./reports/recently_enrolled";
 import { injectSearchButton } from "./utilities/search_menu";
-import { injectBulkAssignmentDatesButton, watchCalendarForGradedAssignments } from "./utilities/bulk_dates_csv";
+import { injectBulkAssignmentDatesButton, watchCalendarForGradedAssignments, addMarkAssignmentsAsCompleteBtn } from "./utilities/bulk_dates_csv";
 
 const OPERATIONS: ReadonlyArray<Operation<any>> = [
     operation({
@@ -27,6 +27,7 @@ const OPERATIONS: ReadonlyArray<Operation<any>> = [
         description: "mark calendar events for graded or complete assignments as complete",
         action: () => {
             watchCalendarForGradedAssignments();
+            addMarkAssignmentsAsCompleteBtn();
         },
         deferUntil: DOMCONTENTLOADED,
         condition: () => isOnCalendar,
