@@ -8,7 +8,8 @@ import { injectSpreadGradeButton } from "./utilities/spread_grade";
 import { injectListUngradedButton } from "./reports/ungraded_report";
 import { injectRecentlyEnrolled } from "./reports/recently_enrolled";
 import { injectSearchButton } from "./utilities/search_menu";
-import { injectBulkAssignmentDatesButton, watchCalendarForGradedAssignments, addMarkAssignmentsAsCompleteBtn } from "./utilities/bulk_dates_csv";
+import { injectBulkAssignmentDatesButton } from "./utilities/bulk_dates_csv";
+import { watchCalendarForGradedAssignments, addMarkAssignmentsAsCompleteBtn, calendarStyles } from "./utilities/calendar_pro";
 
 const OPERATIONS: ReadonlyArray<Operation<any>> = [
     operation({
@@ -24,10 +25,11 @@ const OPERATIONS: ReadonlyArray<Operation<any>> = [
     }),
     //ADDED BY NW
     operation({
-        description: "mark calendar events for graded or complete assignments as complete",
+        description: "Calendar pro added by NW: watch for changes to calendar events and mark assignments appropriately",
         action: () => {
             watchCalendarForGradedAssignments();
             addMarkAssignmentsAsCompleteBtn();
+            calendarStyles();
         },
         deferUntil: DOMCONTENTLOADED,
         condition: () => isOnCalendar,

@@ -46,7 +46,12 @@ const STYLESHEETS = {
                 flex-direction: row;
                 align-items: center;
             }
-       
+
+            #content-wrapper {
+                background-color: #ffffff00;
+            }
+    
+
            
         `,
     }),
