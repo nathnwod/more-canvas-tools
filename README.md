@@ -173,32 +173,33 @@ Here's an example of what my header looks like, note the `@require` line:
 * 0.4.0: New feature for listing recently enrolled users on course page. Also super rough prototype of search command.
 
 
-## Calendar Pro (WIP)
+## Calendar Pro
 
 Contributed by Nathan Wood.
 
-Calendar Pro adds quality enhancements to the Canvas Calendar, focused on making assignment status easier to scan.
+Calendar Pro adds quality enhancements to the Canvas Calendar, focused on making assignment status easier to identify.
 
 Current features:
 1. Mark assignments as complete.
 2. Automatically mark graded assignments as complete (to reduce leftover unmarked items).
 3. Mark assignments as late on the calendar to make missed work harder to miss.
-4. Display assignments as spanning from their available date to their due date (similar to a multi-day event).
-5. Mark locked assignments with a lock symbol.
-6. Minimal style improvements 
+4. Mark locked assignments with a lock symbol.
+5. Minimal style improvements 
 
-Usage:
-- Open the Canvas Calendar.
+## Usage
+
+1. Open the Canvas Calendar.
+2. Click the **"Mark Assignments as Complete"** button to activate the feature.
+3. Click on any event (assignment) to toggle its completion status. Events can be marked as complete, late, locked, or left unmarked.
+   Note that only assignments NOT marked by default can be marked. 
+4. To undo all your changes, press the **"Undo Marked"** button.  
+      *Note: Changes may take a few seconds to appear.*
 
 Status:
-- Work in progress (WIP). Behavior and UI will change.
+- Complete
 
-- Assignments that are either graded or completed, but not marked as complete on the calendar should now be marked as complete automatically
+![alt text](feature1.gif)
 
-- Clicking on events marks them as complete
-      - created a key system to save marked complete assignments when switching pages
+- Possible To-dos: 
 
-
-![alt text](<Screenshot 2026-03-16 221350.png>)
-
-- To-do: Finish adding functionality to each feature.
+*Display assignments as spanning from their available date to their due date (similar to a multi-day event).
